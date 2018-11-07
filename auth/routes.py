@@ -1,4 +1,4 @@
-from flask import Blueprint, make_response, redirect, render_template, url_for
+from flask import Blueprint, make_response, redirect, render_template, request, url_for
 from flask_dance.contrib.slack import slack
 
 
@@ -7,6 +7,11 @@ routes = Blueprint('routes', __name__, template_folder='templates')
 
 @routes.route('/')
 def index():
+    from_url = request.args.get('from')
+    if from_url:
+        slack.blueprint.redirect_url = from_url
+    else:
+        slack.blueprint.redirect_url = url_for('routes.index')
     if not slack.authorized:
         return render_template('before_login.html', link=url_for('slack.login'))
     else:
