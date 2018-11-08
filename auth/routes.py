@@ -1,24 +1,32 @@
-from flask import Blueprint, make_response, redirect, render_template, request, url_for
+from flask import Blueprint, make_response, redirect, render_template, request, session, url_for
 from flask_dance.contrib.slack import slack
 
 
 routes = Blueprint('routes', __name__, template_folder='templates')
 
 
+KEY_REDIRECT_URL = 'redirect_url'
+
+
 @routes.route('/')
 def index():
     from_url = request.args.get('from')
     if from_url:
-        slack.blueprint.redirect_url = from_url
-    else:
-        slack.blueprint.redirect_url = url_for('routes.index')
+        session[KEY_REDIRECT_URL] = from_url
+
     if not slack.authorized:
         return render_template('before_login.html', link=url_for('slack.login'))
-    else:
-        response = slack.get('/api/users.identity?token={}'.format(slack.token['access_token']))
-        if not response.json()['ok'] and False:
-            return logout('before_login.html', link=url_for('slack.login'))
-        return render_template('after_login.html', link=url_for('routes.logout_view'))
+
+    response = slack.get('/api/users.identity?token={}'.format(slack.token['access_token']))
+    if not response.json()['ok']:
+        return logout('before_login.html', link=url_for('slack.login'))
+
+    try:
+        return redirect(session.pop(KEY_REDIRECT_URL))
+    except KeyError:
+        pass
+
+    return render_template('after_login.html', link=url_for('routes.logout_view'))
 
 
 @routes.route('/revoke')
