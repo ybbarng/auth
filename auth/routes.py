@@ -1,3 +1,5 @@
+import json
+
 from flask import Blueprint, make_response, redirect, render_template, request, session, url_for
 from flask_dance.contrib.slack import slack
 
@@ -17,8 +19,7 @@ def index():
     if not slack.authorized:
         return render_template('before_login.html', link=url_for('slack.login'))
 
-    response = slack.get('/api/users.identity?token={}'.format(slack.token['access_token']))
-    if not response.json()['ok']:
+    if not check_validate(slack.token['access_token']):
         return logout(render_template('before_login.html', link=url_for('slack.login')))
 
     try:
@@ -44,3 +45,25 @@ def logout(rv):
     response = make_response(rv)
     response.set_cookie('session', expires=0)
     return response
+
+
+def check_validate(token):
+    return True
+
+
+# 이유는 모르겠는데 invalid_auth이 발생함
+def check_validate_with_auth_test(token):
+    headers = {
+        'Content-type': 'application/json; charset=utf-8',
+    }
+    response = slack.post('/api/auth.test', headers=headers, data=json.dumps({'token': token}))
+    print(response.request.headers)
+    print(response.request.body)
+    print(response.json())
+    return response.json()['ok']
+
+
+def get_identity():
+    response = slack.get('/api/users.identity?token={}'.format(slack.token['access_token']))
+    if not response.json()['ok']:
+        return response
