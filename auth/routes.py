@@ -19,7 +19,7 @@ def index():
 
     response = slack.get('/api/users.identity?token={}'.format(slack.token['access_token']))
     if not response.json()['ok']:
-        return logout('before_login.html', link=url_for('slack.login'))
+        return logout(render_template('before_login.html', link=url_for('slack.login')))
 
     try:
         return redirect(session.pop(KEY_REDIRECT_URL))
