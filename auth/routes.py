@@ -1,5 +1,7 @@
 import json
+import os
 
+from dotenv import load_dotenv
 from flask import Blueprint, make_response, redirect, render_template, request, session, url_for
 from flask_dance.contrib.slack import slack
 
@@ -7,6 +9,8 @@ from flask_dance.contrib.slack import slack
 routes = Blueprint('routes', __name__, template_folder='templates')
 
 
+load_dotenv()
+SLACK_TEAM_NAME = os.getenv('SLACK_TEAM_NAME')
 KEY_REDIRECT_URL = 'redirect_url'
 
 
@@ -17,7 +21,7 @@ def index():
         session[KEY_REDIRECT_URL] = from_url
 
     if not slack.authorized:
-        return render_template('before_login.html', link=url_for('slack.login'))
+        return render_template('before_login.html', link=url_for('slack.login'), team_name=SLACK_TEAM_NAME)
 
     if not check_validate(slack.token['access_token']):
         return logout(render_template('before_login.html', link=url_for('slack.login')))
