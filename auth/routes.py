@@ -11,6 +11,7 @@ routes = Blueprint('routes', __name__, template_folder='templates')
 
 load_dotenv()
 SLACK_TEAM_NAME = os.getenv('SLACK_TEAM_NAME')
+SLACK_TEAM_ID = os.getenv('SLACK_TEAM_ID')
 KEY_REDIRECT_URL = 'redirect_url'
 
 
@@ -23,7 +24,7 @@ def index():
     if not slack.authorized:
         return render_template('before_login.html', link=url_for('slack.login'), team_name=SLACK_TEAM_NAME)
 
-    if not check_validate(slack.token['access_token']):
+    if not validate(slack.token['access_token']):
         return logout(render_template('before_login.html', link=url_for('slack.login')))
 
     try:
@@ -51,8 +52,8 @@ def logout(rv):
     return response
 
 
-def check_validate(token):
-    return True
+def validate(token):
+    return get_user(token) is not None
 
 
 # 이유는 모르겠는데 invalid_auth이 발생함
@@ -67,7 +68,10 @@ def check_validate_with_auth_test(token):
     return response.json()['ok']
 
 
-def get_identity():
-    response = slack.get('/api/users.identity?token={}'.format(slack.token['access_token']))
-    if not response.json()['ok']:
-        return response
+def get_user(slack_token):
+    response = slack.get('/api/users.identity?token={}'.format(slack_token))
+    identity = response.json()
+    if identity['ok'] and identity['team']['id'] == SLACK_TEAM_ID:
+        return identity['user'] # {'name': '', 'id': ''}
+    else:
+        return None
