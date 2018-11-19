@@ -2,9 +2,10 @@ from flask import Flask, url_for
 from flask_dance.contrib.slack import make_slack_blueprint
 from werkzeug.contrib.fixers import ProxyFix
 
-from auth.middleware import PrefixMiddleware
-from auth.routes import routes
-from auth.settings import CLIENT_ID, CLIENT_SECRET, FLASK_SECRET_KEY
+from .middleware import PrefixMiddleware
+from .models import db
+from .routes import routes
+from .settings import CLIENT_ID, CLIENT_SECRET, FLASK_SECRET_KEY
 
 
 def create_app(test_config=None):
@@ -29,3 +30,13 @@ def create_app(test_config=None):
     app.register_blueprint(login_blueprint, url_prefix='/login')
     app.register_blueprint(routes)
     return app
+
+    @app.before_request
+    def before_request():
+        print('here')
+        db.connect()
+
+    @app.after_request
+    def after_request(response):
+        db.close()
+        return response

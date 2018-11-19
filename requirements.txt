@@ -1,2 +1,4 @@
+csiphash==0.0.5
 Flask-Dance==1.1.0
 python-dotenv==0.9.1
+user-agents==1.1.0

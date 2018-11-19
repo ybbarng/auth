@@ -3,7 +3,9 @@ import json
 from flask import Blueprint, make_response, redirect, render_template, request, session, url_for
 from flask_dance.contrib.slack import slack
 
+from .models import *
 from .settings import SLACK_TEAM_ID, SLACK_TEAM_NAME
+from .utils import to_user_id, get_user_agent
 
 
 routes = Blueprint('routes', __name__, template_folder='templates')
@@ -22,7 +24,7 @@ def index():
     if not slack.authorized:
         return render_template('before_login.html', link=url_for('slack.login'), team_name=SLACK_TEAM_NAME)
 
-    if not validate(slack.token['access_token']):
+    if not create(slack.token['access_token']):
         return logout(render_template('before_login.html', link=url_for('slack.login')))
 
     try:
@@ -50,8 +52,19 @@ def logout(rv):
     return response
 
 
-def validate(token):
-    return get_user(token) is not None
+def create(token, auto_save=True):
+    slack_user = get_slack_user(token)
+    if slack_user is None:
+        return None
+    if not auto_save:
+        return slack_user is None
+
+    user = get_or_create_user(slack_user)
+    device = Device.create(user=user, name=get_user_agent(request))
+    return {
+        'user_id': user.id,
+        'device_id': device.id
+    }
 
 
 # 이유는 모르겠는데 invalid_auth이 발생함
@@ -66,10 +79,19 @@ def check_validate_with_auth_test(token):
     return response.json()['ok']
 
 
-def get_user(slack_token):
+def get_slack_user(slack_token):
     response = slack.get('/api/users.identity?token={}'.format(slack_token))
     identity = response.json()
     if identity['ok'] and identity['team']['id'] == SLACK_TEAM_ID:
         return identity['user'] # {'name': '', 'id': ''}
     else:
         return None
+
+
+def get_or_create_user(slack_user):
+    user_id = to_user_id(slack_user['id'])
+    try:
+        user = User.get(User.id == user_id)
+    except User.DoesNotExist:
+        user = User.create(id=user_id, name=slack_user['name'])
+    return user
