@@ -20,4 +20,7 @@ def create_jwt(data):
 
 
 def parse_jwt(jwt_data):
-    return jwt.decode(jwt_data, JWT_KEY, algorithms=['HS512'])
+    try:
+        return jwt.decode(jwt_data, JWT_KEY, algorithms=['HS512'])
+    except:
+        return None
