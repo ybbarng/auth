@@ -1,17 +1,15 @@
 import json
-import os
 
-from dotenv import load_dotenv
 from flask import Blueprint, make_response, redirect, render_template, request, session, url_for
 from flask_dance.contrib.slack import slack
+
+from .settings import SLACK_TEAM_ID, SLACK_TEAM_NAME
 
 
 routes = Blueprint('routes', __name__, template_folder='templates')
 
 
 load_dotenv()
-SLACK_TEAM_NAME = os.getenv('SLACK_TEAM_NAME')
-SLACK_TEAM_ID = os.getenv('SLACK_TEAM_ID')
 KEY_REDIRECT_URL = 'redirect_url'
 
 
