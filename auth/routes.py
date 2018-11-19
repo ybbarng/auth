@@ -5,7 +5,7 @@ from flask_dance.contrib.slack import slack
 
 from .models import *
 from .settings import SLACK_TEAM_ID, SLACK_TEAM_NAME
-from .utils import to_user_id, get_user_agent
+from .utils import to_user_id, get_user_agent, create_jwt
 
 
 routes = Blueprint('routes', __name__, template_folder='templates')
@@ -24,15 +24,15 @@ def index():
     if not slack.authorized:
         return render_template('before_login.html', link=url_for('slack.login'), team_name=SLACK_TEAM_NAME)
 
-    if not create(slack.token['access_token']):
+    access_token = create_access_token(slack.token['access_token'])
+    if access_token is None:
         return logout(render_template('before_login.html', link=url_for('slack.login')))
 
     try:
-        return redirect(session.pop(KEY_REDIRECT_URL))
+        response = make_response(redirect(session.pop(KEY_REDIRECT_URL) + '?access_token={}'.format(access_token)))
     except KeyError:
-        pass
-
-    return render_template('after_login.html', link=url_for('routes.logout_view'))
+        response = make_response(render_template('after_login.html', link=url_for('routes.logout_view')))
+    return response
 
 
 @routes.route('/revoke')
@@ -52,7 +52,7 @@ def logout(rv):
     return response
 
 
-def create(token, auto_save=True):
+def create_access_token(token, auto_save=True):
     slack_user = get_slack_user(token)
     if slack_user is None:
         return None
@@ -61,10 +61,11 @@ def create(token, auto_save=True):
 
     user = get_or_create_user(slack_user)
     device = Device.create(user=user, name=get_user_agent(request))
-    return {
+    access_token = create_jwt({
         'user_id': user.id,
         'device_id': device.id
-    }
+    })
+    return access_token
 
 
 # 이유는 모르겠는데 invalid_auth이 발생함
