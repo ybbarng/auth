@@ -17,6 +17,9 @@ KEY_REDIRECT_URL = 'redirect_url'
 
 @routes.route('/')
 def index():
+    # TODO: redirect 안전하게: app id를 받아서 따로
+    # 저장된 주소로만 redirect하는 방식이 좋을 것 같다.
+    # 점점 Oauth를 구현하는 느낌
     from_url = request.args.get('from')
     if from_url:
         session[KEY_REDIRECT_URL] = from_url
